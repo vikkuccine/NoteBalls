@@ -1,47 +1,83 @@
 import { defineStore } from 'pinia'
+import {
+  collection, onSnapshot,
+  doc, deleteDoc,
+  updateDoc, query, orderBy,
+  addDoc
+} from "firebase/firestore"
+import { db } from '@/js/firebase'
+import { useStoreAuth } from '@/stores/storeAuth'
+
+
+let notesCollectinRef
+let notesCollectinQuery 
+let getNotesSnapshot = null
 
 export const useStoreNotes = defineStore('storeNotes', {
   state: () => {
     return {
       notes: [
-        {
-          id: 'id1',
-          content: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Aliquam in itaque, nam quisquam nihil earum illo obcaecati, delectus iste fuga, non accusamus maxime neque quos quia provident repellendus laudantium saepe.'
-        },
-        {
-          id: 'id2',
-          content: 'This is second note.'
-        },
-      ]
+      ],
+      notesLoaded: false
     }
   },
 
   actions: {
-    addNote(newNoteContent) {
-      let currentData = new Date().getTime()
-      let id = currentData.toString()
+    init() {
+      const storeAuth = useStoreAuth()
 
-      let note = {
-        id,
-        content: newNoteContent
-      }
-      this.notes.unshift(note)
+      notesCollectinRef = collection(db, "users", storeAuth.user.id, 'notes')
+      notesCollectinQuery = query(notesCollectinRef, orderBy("date", "desc"));
+      this.getNotes()
     },
-    deleteNote(idToDelete) {
-      this.notes = this.notes.filter(note => note.id !== idToDelete)
+    async getNotes() {
+      this.notesLoaded = false
+
+      getNotesSnapshot = onSnapshot(notesCollectinQuery, (querySnapshot) => {
+        let notes = []
+        querySnapshot.forEach((doc) => {
+          let note = {
+            id: doc.id,
+            content: doc.data().content,
+            date: doc.data().date
+          }
+          notes.push(note)
+        });
+        this.notes = notes
+        this.notesLoaded = true
+      }, error => {
+        console.log('error.message', error.message);
+      });
     },
-    updateNote(id, content) {
-      console.log('id', id);
-      console.log('content', content);
-      let index = this.notes.findIndex(note => note.id === id)
-      this.notes[index].content = content
+    clearNotes(){
+      this.notes = []
+      if(getNotesSnapshot) getNotesSnapshot() // unsubscribe from any active listener
+    },
+    async addNote(newNoteContent) {
+      let currentData = new Date().getTime()
+      let date = currentData.toString()
+
+      await addDoc(notesCollectinRef, {
+        content: newNoteContent,
+        date
+      });
+    },
+    async deleteNote(idToDelete) {
+      // this.notes = this.notes.filter(note => note.id !== idToDelete)
+
+      await deleteDoc(doc(notesCollectinRef, idToDelete));
+    },
+    async updateNote(id, content) {
+      await updateDoc(doc(notesCollectinRef, id), {
+        content
+      });
     }
   },
 
   getters: {
     getNoteContent: (state) => {
       return (id) => {
-        return state.notes.filter(note => { return note.id === id})[0].content
+        return state.notes.filter(note => { return note.id === id })[0].content
       }
     },
     totalNotesCount: (state) => {

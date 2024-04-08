@@ -9,8 +9,16 @@
 </template>
 
 <script setup>
-
+import { onMounted } from 'vue';
 import NavBar from '@/components/Layout/NavBar.vue'
+import { useStoreAuth } from '@/stores/storeAuth'
+
+const storeAuth = useStoreAuth()
+onMounted(()=> {
+  storeAuth.init()
+})
+
+
 </script>
 
 <style>

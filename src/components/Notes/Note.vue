@@ -3,8 +3,9 @@
         <div class="card-content">
             <div class="content">
                 {{ note.content }}
-                <div class="has-text-right has-text-grey-light mt-4">
-                    <small>{{ characterLength }}</small>
+                <div class="columns is-mobile  has-text-grey-light mt-4">
+                    <small class="column">{{ dateFormatted }}</small>
+                    <small class="column has-text-right">{{ characterLength }}</small>
                 </div>
             </div>
 
@@ -23,6 +24,7 @@
         <ModalDeleteNote
             v-if="modals.deleteNote"
             v-model="modals.deleteNote"
+            :noteId="note.id"
         />
     </div>
 
@@ -30,7 +32,8 @@
 
 <script setup>
 
-import { computed, reactive } from 'vue';
+import { computed, reactive } from 'vue'
+import { useDateFormat } from '@vueuse/core'
 import ModalDeleteNote from '@/components/Notes/ModalDeleteNote.vue'
 import { useStoreNotes } from '@/stores/storeNotes'
 
@@ -42,6 +45,12 @@ const props = defineProps({
 })
 
 const storeNotes = useStoreNotes()
+
+const dateFormatted = computed(() => {
+    let date = new Date(parseInt(props.note.date))
+    let formattedDate = useDateFormat(date, 'MM-DD-YYYY @ HH:mm')
+    return formattedDate.value
+})
 
 const characterLength = computed(() => {
     let descrittion = props.note.content.length > 1 ? 'characters' : 'character'
